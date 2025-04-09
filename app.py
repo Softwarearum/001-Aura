@@ -129,8 +129,7 @@ def configure_sidebar():
         with st.form("transformation_form"):
             st.info("**Welcome to Aura Farm! Start here ↓**", icon="🌱")
             
-            # API Key input
-            openai_api_key = st.text_input("OpenAI API Key", type="password")
+            # API Key is now retrieved from st.secrets - no input field needed
             
             # Simplified transformation style selector - dropdown only
             transformation_style = st.selectbox(
@@ -175,14 +174,13 @@ def configure_sidebar():
             """
         )
         
-        return submitted, openai_api_key, transformation_style, num_images, image_size, uploaded_file
+        return submitted, transformation_style, num_images, image_size, uploaded_file
 
-def transform_image_with_openai(api_key, image_data, style, num_images=1, size="1024x1024"):
+def transform_image_with_openai(image_data, style, num_images=1, size="1024x1024"):
     """
     Transform an image using OpenAI's GPT-4o API.
     
     Args:
-        api_key (str): OpenAI API key.
         image_data (bytes): The image data to transform.
         style (str): The transformation style selected.
         num_images (int): Number of image variations to generate.
@@ -191,6 +189,9 @@ def transform_image_with_openai(api_key, image_data, style, num_images=1, size="
     Returns:
         list: URLs of the generated images.
     """
+    # Get API key from Streamlit secrets
+    api_key = st.secrets["openai"]["api_key"]
+    
     client = OpenAI(api_key=api_key)
     
     try:
@@ -213,13 +214,12 @@ def transform_image_with_openai(api_key, image_data, style, num_images=1, size="
         st.error(f"Error transforming image: {str(e)}")
         return []
 
-def main_page(submitted, api_key, style, num_images, image_size, uploaded_file):
+def main_page(submitted, style, num_images, image_size, uploaded_file):
     """
     Main page layout and logic for transforming images.
     
     Args:
         submitted (bool): Flag indicating whether the form has been submitted.
-        api_key (str): OpenAI API key.
         style (str): Selected transformation style.
         num_images (int): Number of image variations to generate.
         image_size (str): Size of the output image.
@@ -230,7 +230,7 @@ def main_page(submitted, api_key, style, num_images, image_size, uploaded_file):
         with uploaded_image_placeholder.container():
             st.image(uploaded_file, caption="Your Uploaded Image", use_column_width=True)
     
-    if submitted and uploaded_file is not None and api_key:
+    if submitted and uploaded_file is not None:
         with st.status(f'🧙‍♂️ Transforming your image to {style} style...', expanded=True) as status:
             st.write("⚙️ Processing initiated")
             st.write(f"🔮 Applying {style} transformation")
@@ -241,7 +241,6 @@ def main_page(submitted, api_key, style, num_images, image_size, uploaded_file):
                 
                 # Call OpenAI API to transform the image
                 transformed_image_urls = transform_image_with_openai(
-                    api_key, 
                     image_bytes, 
                     style, 
                     num_images, 
@@ -316,8 +315,6 @@ def main_page(submitted, api_key, style, num_images, image_size, uploaded_file):
                 st.error(f'Error during transformation: {str(e)}', icon="🚨")
     elif submitted and not uploaded_file:
         st.warning("Please upload an image to transform.")
-    elif submitted and not api_key:
-        st.warning("Please provide your OpenAI API key.")
 
     # Gallery display for inspiration
     with gallery_placeholder.container():
@@ -345,8 +342,8 @@ def main():
     """
     Main function to run the Streamlit application.
     """
-    submitted, api_key, style, num_images, image_size, uploaded_file = configure_sidebar()
-    main_page(submitted, api_key, style, num_images, image_size, uploaded_file)
+    submitted, style, num_images, image_size, uploaded_file = configure_sidebar()
+    main_page(submitted, style, num_images, image_size, uploaded_file)
 
 if __name__ == "__main__":
     main()
